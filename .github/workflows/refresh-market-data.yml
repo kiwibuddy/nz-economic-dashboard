@@ -1,0 +1,35 @@
+name: Refresh dashboard data
+
+on:
+  schedule:
+    - cron: "30 19 * * 1-5"   # ~07:30 NZ time, weekdays
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-market-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch latest market data
+        run: python3 fetch_data.py
+      - name: Commit if data changed
+        run: |
+          if [ -n "$(git status --porcelain data/market-data.js)" ]; then
+            git config user.name  "market-data-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add data/market-data.js
+            git commit -m "chore: refresh market data $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "No change in market data."
+          fi

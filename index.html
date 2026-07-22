@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NZ Economic Watch — Korea → US → New Zealand</title>
+<!-- Installable web-app (PWA) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NZ Watch">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<style>
+/* ---------- Palette / theme ------------------------------------------------ */
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --panel-2:#fbfbfd; --ink:#1a1d22; --ink-2:#54606e;
+  --muted:#8a95a3; --line:#e4e7ec; --line-2:#eef0f4; --accent:#3a6ea5; --accent-ink:#274b73;
+  /* reserved status colours — always paired with a word + icon, never colour alone */
+  --calm:#2f8f5b; --calm-bg:#e7f4ec;
+  --watch:#c98a00; --watch-bg:#fbf1d8;
+  --elevated:#d9730d; --elevated-bg:#fbe9d6;
+  --high:#cf4b57; --high-bg:#fbe3e5;
+  --severe:#9b1c31; --severe-bg:#f7dade;
+  --shadow:0 1px 2px rgba(20,30,45,.06),0 8px 24px rgba(20,30,45,.06);
+  --radius:16px;
+  font-synthesis:none;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1216; --panel:#171b21; --panel-2:#1c2128; --ink:#eef1f5; --ink-2:#aeb8c4;
+    --muted:#6f7b89; --line:#262c34; --line-2:#20262d; --accent:#6fa8dc; --accent-ink:#9cc4e6;
+    --calm:#57c78a; --calm-bg:#12291d;
+    --watch:#e2b23c; --watch-bg:#2b2410;
+    --elevated:#f0954a; --elevated-bg:#2e1f10;
+    --high:#f07782; --high-bg:#2e1417;
+    --severe:#f0808f; --severe-bg:#2c1013;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1216; --panel:#171b21; --panel-2:#1c2128; --ink:#eef1f5; --ink-2:#aeb8c4;
+  --muted:#6f7b89; --line:#262c34; --line-2:#20262d; --accent:#6fa8dc; --accent-ink:#9cc4e6;
+  --calm:#57c78a; --calm-bg:#12291d; --watch:#e2b23c; --watch-bg:#2b2410;
+  --elevated:#f0954a; --elevated-bg:#2e1f10; --high:#f07782; --high-bg:#2e1417;
+  --severe:#f0808f; --severe-bg:#2c1013;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#f4f5f7; --panel:#ffffff; --panel-2:#fbfbfd; --ink:#1a1d22; --ink-2:#54606e;
+  --muted:#8a95a3; --line:#e4e7ec; --line-2:#eef0f4; --accent:#3a6ea5; --accent-ink:#274b73;
+  --calm:#2f8f5b; --calm-bg:#e7f4ec; --watch:#c98a00; --watch-bg:#fbf1d8;
+  --elevated:#d9730d; --elevated-bg:#fbe9d6; --high:#cf4b57; --high-bg:#fbe3e5;
+  --severe:#9b1c31; --severe-bg:#f7dade;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 18px 80px;}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3{line-height:1.2;margin:0}
+.small{font-size:13px;color:var(--muted)}
+.mono{font-variant-numeric:tabular-nums}
+
+/* ---------- Header --------------------------------------------------------- */
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.brand h1{font-size:22px;letter-spacing:-.01em}
+.brand p{margin:3px 0 0;font-size:13px;color:var(--ink-2)}
+.tools{display:flex;gap:8px;align-items:center}
+button.ghost{background:var(--panel);border:1px solid var(--line);color:var(--ink-2);
+  border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer}
+button.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- Tabs ----------------------------------------------------------- */
+.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:6px;margin-bottom:20px;box-shadow:var(--shadow);position:sticky;top:8px;z-index:20}
+.tabs button{flex:1;border:0;background:transparent;color:var(--ink-2);font-size:14.5px;
+  font-weight:600;padding:11px 10px;border-radius:9px;cursor:pointer;transition:.15s}
+.tabs button .n{opacity:.5;margin-right:6px}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+:root[data-theme="dark"] .tabs button[aria-selected="true"]{color:#0f1216}
+@media (prefers-color-scheme:dark){.tabs button[aria-selected="true"]{color:#0f1216}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+.panel h2{font-size:16px;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-2)}
+.panel h2 .sub{text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);font-size:13px}
+
+/* ---------- Warning hero --------------------------------------------------- */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+@media(max-width:640px){.hero{grid-template-columns:1fr}}
+.gauge{width:196px;text-align:center;padding:20px 14px;border-radius:14px;border:1px solid var(--line)}
+.gauge .lvlnum{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.gauge .lvlname{font-size:30px;font-weight:800;margin:2px 0 4px;letter-spacing:-.01em}
+.gauge .lvlicon{font-size:30px}
+.ladder{display:flex;gap:4px;margin-top:12px}
+.ladder span{flex:1;height:7px;border-radius:4px;background:var(--line)}
+.hero .read h3{font-size:19px;margin-bottom:6px}
+.hero .read p{margin:0 0 8px;color:var(--ink-2);font-size:15px}
+.drivers{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.chip{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--ink-2);display:inline-flex;gap:6px;align-items:center}
+
+/* status coloured surfaces (word+icon always present) */
+.s-calm{background:var(--calm-bg);border-color:var(--calm)}      .s-calm .lvlname,.t-calm{color:var(--calm)}
+.s-watch{background:var(--watch-bg);border-color:var(--watch)}   .s-watch .lvlname,.t-watch{color:var(--watch)}
+.s-elevated{background:var(--elevated-bg);border-color:var(--elevated)} .s-elevated .lvlname,.t-elevated{color:var(--elevated)}
+.s-high{background:var(--high-bg);border-color:var(--high)}      .s-high .lvlname,.t-high{color:var(--high)}
+.s-severe{background:var(--severe-bg);border-color:var(--severe)}.s-severe .lvlname,.t-severe{color:var(--severe)}
+
+/* ---------- Indicator grid ------------------------------------------------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+.tile{border:1px solid var(--line);border-radius:13px;padding:14px 15px;background:var(--panel-2);position:relative}
+.tile .lab{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tile .lab b{font-size:13.5px;font-weight:700}
+.tile .flag{font-size:16px}
+.tile .val{font-size:26px;font-weight:800;margin:6px 0 1px;letter-spacing:-.02em}
+.tile .chg{font-size:13px;font-weight:600}
+.tile .expl{font-size:12.5px;color:var(--ink-2);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle}
+.up{color:var(--calm)} .down{color:var(--high)} .flat{color:var(--muted)}
+.bar{height:6px;border-radius:4px;background:var(--line);margin-top:10px;overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:4px}
+.ddlabel{font-size:11.5px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between}
+
+/* ---------- Domino chain --------------------------------------------------- */
+.chain{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:760px){.chain{grid-template-columns:1fr}}
+.link{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-2);position:relative}
+.link .step{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.link h4{font-size:15px;margin:3px 0 6px}
+.link p{font-size:12.8px;color:var(--ink-2);margin:0}
+.link .st{position:absolute;top:12px;right:12px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.link.on{box-shadow:0 0 0 2px var(--accent) inset}
+
+/* ---------- Your Money ----------------------------------------------------- */
+.advice{border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:12px}
+.advice > summary{list-style:none;cursor:pointer;padding:15px 17px;display:flex;justify-content:space-between;
+  align-items:center;gap:12px;background:var(--panel-2)}
+.advice > summary::-webkit-details-marker{display:none}
+.advice summary h3{font-size:16px}
+.advice summary .now{font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.advice .body{padding:4px 17px 17px}
+.advice .body .headline{font-size:14.5px;font-weight:600;margin:10px 0;padding:11px 13px;border-radius:10px;
+  border-left:3px solid var(--accent);background:var(--panel-2)}
+.advice .body ul{margin:8px 0 4px;padding-left:20px}
+.advice .body li{margin:5px 0;font-size:14px;color:var(--ink-2)}
+.advice .body .why{font-size:13px;color:var(--muted);margin-top:10px;border-top:1px solid var(--line-2);padding-top:9px}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-right:6px}
+.pill.do{background:var(--calm-bg);color:var(--calm)}
+.pill.hold{background:var(--watch-bg);color:var(--watch)}
+.pill.avoid{background:var(--high-bg);color:var(--high)}
+
+.callout{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel-2);
+  border-radius:10px;padding:13px 15px;font-size:13.5px;color:var(--ink-2);margin:14px 0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 14px;font-size:13.5px;margin-top:6px}
+.kv .k{color:var(--ink-2)} .kv .v{font-weight:700;text-align:right}
+.disc{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:24px}
+.hidden{display:none}
+.updated{font-size:12px;color:var(--muted)}
+.livedot{width:7px;height:7px;border-radius:50%;background:var(--calm);display:inline-block;margin-right:5px;
+  box-shadow:0 0 0 0 var(--calm);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,143,91,.5)}70%{box-shadow:0 0 0 6px rgba(47,143,91,0)}100%{box-shadow:0 0 0 0 rgba(47,143,91,0)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>NZ Economic Watch</h1>
+      <p>Is the Korea &rarr; US market story reaching New Zealand — and what it means for your money. Plain English, no jargon.</p>
+    </div>
+    <div class="tools">
+      <button class="ghost" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true"  id="tab1"><span class="n">①</span>Global &amp; NZ Watch</button>
+    <button role="tab" aria-selected="false" id="tab2"><span class="n">②</span>Your Money (NZ)</button>
+  </div>
+
+  <!-- ================= TAB 1 : WATCH ================= -->
+  <section id="view1">
+
+    <div class="panel">
+      <div class="hero">
+        <div class="gauge" id="gauge">
+          <div class="lvlnum">Today&rsquo;s warning level</div>
+          <div class="lvlicon" id="gIcon">•</div>
+          <div class="lvlname" id="gName">—</div>
+          <div class="ladder" id="ladder"></div>
+        </div>
+        <div class="read">
+          <h3 id="summaryHead">Reading the situation…</h3>
+          <p id="summaryText"></p>
+          <div class="drivers" id="drivers"></div>
+          <div class="updated" style="margin-top:12px" id="updatedLine"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>The indicators <span class="sub">— the few numbers that actually matter. Each refreshes daily.</span></h2>
+      <div class="grid" id="tiles" style="margin-top:14px"></div>
+      <p class="small" style="margin-top:14px">Green/amber/red dots show whether each number is calm, worth watching, or a real drag. The bars show how far an index has fallen from its highest point in the past year (its &ldquo;drawdown&rdquo;) — that&rsquo;s the honest measure of damage done, not the scary one-day headline.</p>
+    </div>
+
+    <div class="panel">
+      <h2>The ground underneath <span class="sub">— the video's real thesis: how fragile is the setup? (slow-moving)</span></h2>
+      <div class="grid" id="structural" style="margin-top:14px"></div>
+      <p class="small" style="margin-top:14px">These don&rsquo;t move day to day — they update monthly (margin debt) or quarterly (AI spending). They&rsquo;re why the video argues a fall would be <em>amplified</em> if it comes: record borrowed money and a circular AI-spending loop. Important: high leverage tells you a drop would be <b>worse</b>, not <b>when</b> it starts. It&rsquo;s a smoke-detector, not a clock.</p>
+    </div>
+
+    <div class="panel">
+      <h2>How the dominoes connect <span class="sub">— why a Seoul crash can end up in a Tauranga bank account</span></h2>
+      <div class="chain" id="chain" style="margin-top:14px"></div>
+      <p class="small" style="margin-top:14px">A link glows when today&rsquo;s data suggests that domino is actually wobbling. Most days the early ones move and the later ones don&rsquo;t — that&rsquo;s the whole point of watching: you see it <em>coming down the chain</em>, not after it arrives.</p>
+    </div>
+
+    <div class="panel">
+      <h2>What the doom videos get right — and oversell</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px" id="verdictGrid">
+        <div>
+          <h3 style="font-size:14px;color:var(--calm)">✓ Real and verified</h3>
+          <ul class="small" style="color:var(--ink-2);line-height:1.7">
+            <li>Korea&rsquo;s KOSPI genuinely crashed ~9–10% in a day and is down roughly a quarter from its June peak.</li>
+            <li>It was a <b>leverage bubble</b>: record margin borrowing, then forced selling of ~320,000+ retail accounts.</li>
+            <li>Two stocks — Samsung &amp; SK Hynix — are more than <b>half</b> the whole index. Real, dangerous concentration.</li>
+            <li>Your KiwiSaver <b>is</b> exposed to the same US AI-tech names.</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="font-size:14px;color:var(--high)">✕ Overstated / not yet true</h3>
+          <ul class="small" style="color:var(--ink-2);line-height:1.7">
+            <li>&ldquo;It&rsquo;s already a <b>global</b> crash.&rdquo; The US is down low single digits; the fear gauge (VIX) is calm.</li>
+            <li>Korea&rsquo;s scary numbers (-25%, 320k wiped out) get re-used to imply a <b>worldwide</b> collapse. That&rsquo;s a switch.</li>
+            <li>&ldquo;This <b>will</b> trigger 2008 again.&rdquo; A forecast dressed as a fact. 2008 was a banking crisis; this is an equity-leverage unwind.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">Full claim-by-claim fact-check with sources is in <b>FACT-CHECK.md</b> alongside this page. Short version: <b>real, serious, still contained.</b> A genuine &ldquo;watch,&rdquo; not yet a &ldquo;brace.&rdquo;</div>
+    </div>
+
+  </section>
+
+  <!-- ================= TAB 2 : YOUR MONEY ================= -->
+  <section id="view2" class="hidden">
+
+    <div class="panel" id="moneyBanner">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+        <div>
+          <h2 style="text-transform:none;letter-spacing:0;font-size:18px;color:var(--ink)">Because the watch level is <span id="bannerLvl">—</span>, here&rsquo;s what changes for you</h2>
+          <p class="small" id="bannerSub" style="margin-top:4px"></p>
+        </div>
+        <div class="gauge" id="bannerGauge" style="width:150px;padding:12px">
+          <div class="lvlicon" id="bIcon" style="font-size:24px">•</div>
+          <div class="lvlname" id="bName" style="font-size:20px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>The order that (almost) never changes.</b> No matter what the market does, the priority ladder for an ordinary NZ household is: <b>1)</b> keep a cash buffer, <b>2)</b> kill high-interest debt (credit cards), <b>3)</b> don&rsquo;t panic-sell long-term investments, <b>4)</b> then optimise the rest. The warning level mostly changes <em>how hard you lean</em> on each rung — not the order.
+    </div>
+
+    <div id="adviceList"></div>
+
+    <div class="panel">
+      <h2>Plain-English money glossary</h2>
+      <div class="kv" id="glossary" style="margin-top:8px"></div>
+    </div>
+
+  </section>
+
+  <p class="disc" id="disc"></p>
+</div>
+
+<!-- data first, engine second -->
+<script src="data/market-data.js"></script>
+<script>
+/* ===========================================================================
+ *  WARNING ENGINE  — turns raw numbers into (a) a warning level, (b) a plain
+ *  daily summary, and (c) the personal-finance advice on tab 2. One brain,
+ *  two dashboards. Change the thresholds here and everything downstream moves.
+ * =========================================================================*/
+const LEVELS = [
+  {key:"calm",     name:"Calm",     icon:"🟢", cls:"s-calm",     tone:"t-calm"},
+  {key:"watch",    name:"Watch",    icon:"🟡", cls:"s-watch",    tone:"t-watch"},
+  {key:"elevated", name:"Elevated", icon:"🟠", cls:"s-elevated", tone:"t-elevated"},
+  {key:"high",     name:"High",     icon:"🔴", cls:"s-high",     tone:"t-high"},
+  {key:"severe",   name:"Severe",   icon:"🛑", cls:"s-severe",   tone:"t-severe"}
+];
+
+function pct(a,b){ return b ? (a-b)/b*100 : 0; }
+function fmt(n,d=0){ return n==null?"—":Number(n).toLocaleString("en-NZ",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+/* score each indicator → contribute points; also decide its own dot colour */
+function assess(D){
+  const I = D.indicators, out = {parts:{}, score:0, drivers:[]};
+  const add=(k,pts,driverText,statusIdx)=>{ out.parts[k]={pts,statusIdx}; out.score+=pts; if(driverText) out.drivers.push({text:driverText,statusIdx}); };
+
+  // KOSPI drawdown from 52-week peak — the epicentre
+  const kdd = pct(I.kospi.value,I.kospi.peak52w);
+  if(kdd<=-20) add("kospi",3,`Korea (KOSPI) is ${Math.abs(kdd).toFixed(0)}% below its peak — a crash`,3);
+  else if(kdd<=-10) add("kospi",2,`Korea (KOSPI) is ${Math.abs(kdd).toFixed(0)}% off its peak`,2);
+  else if(kdd<=-5) add("kospi",1,`Korea (KOSPI) is sliding`,1);
+  else add("kospi",0,null,0);
+
+  // S&P 500 drawdown — is the US actually breaking?
+  const sdd = pct(I.spx.value,I.spx.peak52w);
+  if(sdd<=-15) add("spx",3,`US S&P 500 down ${Math.abs(sdd).toFixed(0)}% from its high`,3);
+  else if(sdd<=-10) add("spx",2,`US S&P 500 in a correction (${Math.abs(sdd).toFixed(0)}%)`,2);
+  else if(sdd<=-5) add("spx",1,`US S&P 500 pulling back`,1);
+  else add("spx",0,null,0);
+
+  // Nasdaq (tech) drawdown — where the AI trade lives
+  const ndd = pct(I.ndq.value,I.ndq.peak52w);
+  if(ndd<=-15) add("ndq",2,`US tech (Nasdaq) down ${Math.abs(ndd).toFixed(0)}%`,3);
+  else if(ndd<=-8) add("ndq",1,`US tech (Nasdaq) softening`,2);
+  else add("ndq",0,null,0);
+
+  // VIX — the fear gauge. Calm below 20.
+  const v=I.vix.value;
+  if(v>=35) add("vix",3,`Fear gauge (VIX ${v.toFixed(0)}) at panic levels`,3);
+  else if(v>=25) add("vix",2,`Fear gauge (VIX ${v.toFixed(0)}) elevated`,2);
+  else if(v>=20) add("vix",1,`Fear gauge (VIX ${v.toFixed(0)}) ticking up`,1);
+  else add("vix",0,null,0);
+
+  // NZX 50 drawdown
+  const zdd = pct(I.nzx50.value,I.nzx50.peak52w);
+  if(zdd<=-12) add("nzx50",2,`NZX 50 down ${Math.abs(zdd).toFixed(0)}%`,3);
+  else if(zdd<=-6) add("nzx50",1,`NZX 50 easing back`,2);
+  else add("nzx50",0,null,0);
+
+  // NZD/USD 1-month move — a falling kiwi = imported inflation + risk-off
+  const nchg = pct(I.nzdusd.value,I.nzdusd.ref1m);
+  if(nchg<=-4) add("nzdusd",2,`NZ dollar down ${Math.abs(nchg).toFixed(0)}% this month`,2);
+  else if(nchg<=-2) add("nzdusd",1,`NZ dollar slipping`,1);
+  else add("nzdusd",0,null,0);
+
+  // Dairy (GDT) — export income for the whole country
+  if(I.gdt.value<=-8) add("gdt",1,`Dairy prices falling hard at auction`,2);
+  else add("gdt",0,null,0);
+
+  // Score → level band
+  let idx = 0;
+  if(out.score>=10) idx=4; else if(out.score>=7) idx=3; else if(out.score>=4) idx=2; else if(out.score>=2) idx=1; else idx=0;
+  out.levelIdx = idx;
+  return out;
+}
+
+/* one calm paragraph explaining today, generated from the data */
+function summaryText(D,A){
+  const I=D.indicators, L=LEVELS[A.levelIdx].name.toLowerCase();
+  const kdd=Math.abs(pct(I.kospi.value,I.kospi.peak52w)).toFixed(0);
+  const sdd=pct(I.spx.value,I.spx.peak52w);
+  const usPhrase = sdd>-3 ? `The US market is still within a whisker of its highs and Wall Street&rsquo;s fear gauge is calm (VIX ${I.vix.value.toFixed(0)})`
+                          : `The US market has now pulled back ${Math.abs(sdd).toFixed(0)}% and the fear gauge is rising (VIX ${I.vix.value.toFixed(0)})`;
+  const nzdd=pct(I.nzx50.value,I.nzx50.peak52w);
+  const nzPhrase = nzdd>-3 ? `New Zealand&rsquo;s own market (NZX 50) is holding up`
+                           : `New Zealand&rsquo;s market has drifted ${Math.abs(nzdd).toFixed(0)}% off its high`;
+  const heads={
+    calm:"Quiet. The Korea story is loud online but the numbers are calm.",
+    watch:"Worth watching, not worrying. The Korea crash is real; the spillover is limited.",
+    elevated:"Stress is spreading beyond Korea. Time to tidy your finances.",
+    high:"A real, broad sell-off is underway. Defensive mode.",
+    severe:"Global stress event. Protect the essentials, avoid forced decisions."
+  };
+  const tail={
+    calm:"Nothing here demands action. Keep your buffer, keep your plan.",
+    watch:"Korea is in genuine trouble — a leverage bubble unwinding — but it has not become a global crash, and the honest indicators say so. The main NZ channel is your KiwiSaver&rsquo;s exposure to the same US tech names, not your day-to-day cost of living. Sensible housekeeping now; no panic.",
+    elevated:"The wobble is reaching more markets. This is the moment to make sure your cash buffer is real and your high-interest debt is shrinking — before, not during, any deeper fall.",
+    high:"Prices are falling broadly and the fear gauge confirms it. Do not sell long-term investments into the fear; do make sure short-term cash needs are covered.",
+    severe:"This is the environment where forced decisions destroy wealth. Cover essentials, keep your KiwiSaver where it belongs for your timeframe, and wait for the dust rather than acting in it."
+  };
+  return {
+    head: heads[L],
+    body: `Korea&rsquo;s KOSPI is about ${kdd}% below its June peak — the crash is genuine. But ${usPhrase}, and ${nzPhrase}. ${tail[L]}`
+  };
+}
+
+/* ---- render tab 1 --------------------------------------------------------- */
+const TILE_META = {
+  kospi:{explUp:"The epicentre. When this stabilises, the whole story cools.",explDown:"The source of the scare — a leverage-driven crash in AI-chip stocks."},
+  spx: {explUp:"The real test. If this stays near its high, there is no global crash.",explDown:"The contagion has reached the US — the number that matters most."},
+  ndq: {explUp:"Where the AI trade lives. Calm here means the bubble talk is just talk, for now.",explDown:"AI-tech is where any global de-rating shows up first."},
+  vix: {explUp:"Below 20 = calm. This is the market&rsquo;s own honesty check on the doom stories.",explDown:"Rising fear. Above 30 is genuine panic pricing."},
+  nzx50:{explUp:"NZ is holding up. Local jobs and dividends less threatened.",explDown:"The story has reached NZ-listed companies (Infratil, Spark, Chorus)."},
+  nzdusd:{explUp:"A steady kiwi keeps imported goods and petrol from getting dearer.",explDown:"A weaker kiwi makes imports & travel pricier — imported inflation."},
+  gdt: {explUp:"Dairy is the country&rsquo;s paycheck. Firm prices support the whole economy.",explDown:"Falling dairy hits farm incomes, then rural towns, then the tax take."}
+};
+function tile(key,D,A){
+  const I=D.indicators[key], p=A.parts[key]||{statusIdx:0};
+  const st=LEVELS[Math.min(p.statusIdx,4)];
+  let valStr, chgStr, chgCls, dd=null, ddPeak=I.peak52w;
+  if(key==="gdt"){
+    valStr = (I.value>0?"+":"")+I.value.toFixed(1)+"%";
+    chgStr = "last auction · WMP US$"+fmt(I.wmp)+"/t";
+    chgCls = I.value<0?"down":"up";
+  }else if(key==="nzdusd"){
+    valStr = I.value.toFixed(4);
+    const c = pct(I.value,I.prevClose);
+    chgStr = (c>=0?"▲ ":"▼ ")+Math.abs(c).toFixed(2)+"% today";
+    chgCls = c>0?"up":c<0?"down":"flat";
+    const m = pct(I.value,I.ref1m);
+    dd = m; ddPeak=I.ref1m;
+  }else{
+    valStr = fmt(I.value, I.value<100?2:0);
+    const c = pct(I.value,I.prevClose);
+    chgStr = (c>=0?"▲ ":"▼ ")+Math.abs(c).toFixed(2)+"% today";
+    chgCls = c>0?"up":c<0?"down":"flat";
+    if(ddPeak){ dd = pct(I.value,ddPeak); }
+  }
+  const expl = (chgCls==="down") ? TILE_META[key].explDown : TILE_META[key].explUp;
+  let barHtml="";
+  if(dd!=null){
+    const mag=Math.min(Math.abs(dd),40)/40*100;
+    const col = st.key==="calm"?"var(--calm)":st.key==="watch"?"var(--watch)":st.key==="elevated"?"var(--elevated)":st.key==="high"?"var(--high)":"var(--severe)";
+    const lab = key==="nzdusd" ? "vs 1 month ago" : "below 1-yr high";
+    barHtml=`<div class="bar"><i style="width:${mag}%;background:${col}"></i></div>
+             <div class="ddlabel"><span>${lab}</span><span class="mono">${dd>0?"+":""}${dd.toFixed(1)}%</span></div>`;
+  }
+  return `<div class="tile">
+    <div class="lab"><b>${I.label}</b><span class="flag" title="${I.country}">${I.flag}</span></div>
+    <div class="val mono">${valStr}</div>
+    <div class="chg ${chgCls}">${chgStr}</div>
+    ${barHtml}
+    <div class="expl"><span class="dot" style="background:var(--${st.key})"></span> ${expl}</div>
+  </div>`;
+}
+
+const CHAIN = [
+  {step:"Domino 1", h:"Korea cracks", p:"Borrowed money forces selling in Samsung &amp; SK Hynix. A concentrated, leveraged market unwinds fast.", keys:["kospi"]},
+  {step:"Domino 2", h:"US tech catches a cold", p:"The same AI-chip trade drives Wall Street. Doubt in Seoul becomes doubt about Nvidia &amp; the whole AI spend.", keys:["ndq","spx","vix"]},
+  {step:"Domino 3", h:"Risk-off hits NZ", p:"Global fear pulls the NZ dollar down and drags NZX names tied to the AI/data-centre trade (Infratil, Spark, Chorus).", keys:["nzx50","nzdusd"]},
+  {step:"Domino 4", h:"It reaches your money", p:"Your KiwiSaver (~$35b in US shares) falls; a weaker kiwi lifts import prices; if it deepens, dairy income &amp; jobs follow.", keys:["nzdusd","gdt"]}
+];
+function renderChain(A){
+  document.getElementById("chain").innerHTML = CHAIN.map((c,i)=>{
+    const active = c.keys.some(k=>(A.parts[k]&&A.parts[k].statusIdx>=2));
+    const worst = Math.max(0,...c.keys.map(k=>A.parts[k]?A.parts[k].statusIdx:0));
+    const st=LEVELS[Math.min(worst,4)];
+    const badge = active
+      ? `<span class="st ${st.tone}" style="background:var(--${st.key}-bg)">${st.icon} moving</span>`
+      : `<span class="st" style="background:var(--line);color:var(--muted)">quiet</span>`;
+    return `<div class="link ${active?'on':''}">${badge}<div class="step">${c.step}</div><h4>${c.h}</h4><p>${c.p}</p></div>`;
+  }).join("");
+}
+
+/* structural gauges — the video's fragility thesis (not part of daily score) */
+function renderStructural(D){
+  const S=D.structural; if(!S){document.getElementById("structural").innerHTML="";return;}
+  const card=(big,label,sub,statusKey,foot)=>`<div class="tile">
+      <div class="lab"><b>${label}</b>${statusKey?`<span class="dot" style="background:var(--${statusKey})"></span>`:""}</div>
+      <div class="val mono">${big}</div>
+      <div class="expl" style="border-top:0;padding-top:6px">${sub}</div>
+      ${foot?`<div class="ddlabel" style="margin-top:8px">${foot}</div>`:""}
+    </div>`;
+  document.getElementById("structural").innerHTML = [
+    card(S.marginDebtGdp.value.toFixed(2)+"%","US margin debt / GDP",
+         S.marginDebtGdp.note,"high",
+         `<span>${S.marginDebtGdp.record?"⚠ all-time record":""}</span><span class="mono">${S.marginDebtGdp.asOf}</span>`),
+    card("$"+S.marginDebtT.value.toFixed(2)+"T","Total US margin debt",
+         "The actual borrowed-money pile behind US shares.","high",
+         `<span>vs ~$1.0T pre-2022</span><span class="mono">${S.marginDebtT.asOf}</span>`),
+    card("$"+S.hyperscalerCapexB.value+"B","Big-4 AI spend / year",
+         S.hyperscalerCapexB.note,"elevated",
+         `<span>up from $${S.hyperscalerCapexB.prevValue}B</span><span class="mono">${S.hyperscalerCapexB.asOf}</span>`),
+    card("~"+S.capexRoiCents.value+"¢","Return per $ of AI spend",
+         S.capexRoiCents.note,"elevated",
+         `<span>was ${S.capexRoiCents.from}¢ → toward ${S.capexRoiCents.toward}¢</span><span>Chanos</span>`),
+    card(S.spxTop10Pct.value+"%","Top-10 = % of S&P 500",
+         S.spxTop10Pct.note,"watch",
+         `<span>record concentration</span><span></span>`)
+  ].join("");
+}
+
+/* ---- render tab 2 : advice keyed to level -------------------------------- */
+/* each topic returns {headline, points:[{tag,text}], why} PER level index 0-4 */
+function adviceModel(D,idx){
+  const C=D.context, mort=C.mortgage1yrFixed.toFixed(1), td=C.termDeposit1yr.toFixed(1);
+  const risingRates = C.ocrDirection==="up";
+  const A={};
+
+  A.buffer = {
+    title:"💵 Emergency cash buffer",
+    tag:["Solid","Solid","Top up","Prioritise","Prioritise"][idx],
+    headline:[
+      "Keep the standard 3 months of expenses in easy-access cash. Nothing to change today.",
+      "Keep 3 months of expenses in easy-access cash. This is your shock absorber — make sure it&rsquo;s actually there.",
+      "Nudge your buffer toward 3–6 months. Build it from new income, not by selling investments.",
+      "Aim for 6 months of essentials in cash. This is the single most protective thing you can do now.",
+      "Cash for 6+ months of essentials comes before everything except the mortgage roof over your head."
+    ][idx],
+    points:[
+      {tag:"do",text:"Hold it in an on-call or notice saver / short term deposit — safe and reachable."},
+      {tag:idx>=2?"do":"hold",text:"Top it up from salary, not by cashing in KiwiSaver or shares at a low."},
+      {tag:"avoid",text:"Don&rsquo;t chase yield with your buffer — its job is to be boring and available."}
+    ],
+    why:"A cash buffer is what stops a market fall from forcing you to sell investments at the worst time. It converts a crisis into an inconvenience."
+  };
+
+  A.creditcard = {
+    title:"💳 Credit-card &amp; high-interest debt",
+    tag:["Kill it","Kill it","Kill it fast","Kill it fast","Kill it fast"][idx],
+    headline:[
+      "Clear card balances every month. At ~20%+ interest this is the best guaranteed &lsquo;return&rsquo; you can get — beats any investment.",
+      "Pay down cards aggressively. No market wobble changes the maths: 20% interest is a bigger drag than any market gain.",
+      "Prioritise clearing high-interest debt now, while you still have income flexibility.",
+      "Attack high-interest debt hard. Going into a downturn owing 20% is the trap that turns a scare into a spiral.",
+      "Highest priority after the cash buffer: no high-interest debt should survive into a deep downturn if you can help it."
+    ][idx],
+    points:[
+      {tag:"do",text:"Pay the highest-rate debt first (usually cards, then personal loans, then buy-now-pay-later)."},
+      {tag:"do",text:`Consider consolidating onto a lower rate — but only if it truly lowers the interest, not just the minimum payment.`},
+      {tag:idx>=3?"avoid":"hold",text:"Avoid new BNPL / hire purchase — invisible debt that bites hardest when money is tight."}
+    ],
+    why:"Paying off a 20% card is mathematically identical to earning 20% risk-free. Nothing in the share market reliably beats that, so this comes before investing spare cash — in every weather."
+  };
+
+  A.mortgage = {
+    title:"🏠 Mortgage",
+    tag:["Steady","Plan refix","Plan refix","Review","Review"][idx],
+    headline:[
+      `OCR is ${C.ocr.toFixed(2)}% and the average mortgage is refixing lower (toward ~4.7% by spring). If you refix soon you&rsquo;ll likely get a better rate than your last one.`,
+      `OCR is ${C.ocr.toFixed(2)}% (just nudged ${risingRates?"up":"down"}). Rates are still historically moderate. When you refix, splitting across 1- and 2-year terms hedges your bets.`,
+      `Global stress can push bank funding costs — and fixed mortgage rates — around independently of the OCR. Lock in certainty on part of your loan if a steady payment helps you sleep.`,
+      `In a broad downturn, fixed mortgage rates often fall (money flees to safety) even as jobs get riskier. Prioritise payment certainty and your income buffer over chasing the last basis point.`,
+      `Protect the roof first. If income is at risk, talk to your bank early about options (interest-only, extending the term) — banks deal far better with a phone call before a missed payment than after.`
+    ][idx],
+    points:[
+      {tag:"do",text:`Around refix time, compare 6-month, 1-year and 2-year fixed. Current 1-yr is ~${mort}%.`},
+      {tag:idx>=2?"do":"hold",text:"Consider splitting the loan across two terms so you&rsquo;re never 100% exposed to one refix date."},
+      {tag:idx>=3?"do":"hold",text:"Keep some emergency cash rather than throwing every dollar at the mortgage in a downturn — liquidity protects you when income doesn&rsquo;t."},
+      {tag:"avoid",text:"Don&rsquo;t break a fixed loan to chase a lower rate without checking the break fee — it often wipes out the saving."}
+    ],
+    why:"Your mortgage rate is set more by wholesale &lsquo;swap&rsquo; rates and bank funding than by the OCR alone. A global risk-off event can move these either way, so the goal is certainty you can live with, not perfect timing."
+  };
+
+  A.kiwisaver = {
+    title:"📈 KiwiSaver &amp; retirement savings",
+    tag:["Stay the course","Stay the course","Check your mix","Hold — don&rsquo;t sell","Hold — don&rsquo;t sell"][idx],
+    headline:[
+      "Do nothing based on headlines. Your fund already owns the US tech names in the news — that&rsquo;s normal, and switching in and out is how people lock in losses.",
+      "Stay invested. But this is a good, calm moment to check one thing: is your fund&rsquo;s risk level right for when you&rsquo;ll actually need the money?",
+      "Check your mix, don&rsquo;t chase it. If you&rsquo;re within ~3 years of needing the money (retirement or a first home), a portion in a lower-risk fund is prudent — decide that on your timeframe, not on this week&rsquo;s news.",
+      "Hold. If your timeframe is 5+ years, a fall is a discount, not a loss — your regular contributions are now buying more units cheaply. Switching to conservative now just crystallises the drop.",
+      "Do not panic-switch. The people hurt most in every downturn are those who sold at the bottom into a &lsquo;safe&rsquo; fund and missed the rebound. Only de-risk money you need within ~2–3 years."
+    ][idx],
+    points:[
+      {tag:"do",text:`Know your exposure: NZ KiwiSaver holds ~$${D.context.kiwisaverUSEquityB}b in US shares, heavily in the same AI-tech names. Growth funds feel this most.`},
+      {tag:"do",text:"Match fund risk to your timeframe: money needed in 0–3 yrs → conservative; 10+ yrs → growth is fine even now."},
+      {tag:idx>=3?"avoid":"hold",text:"Switching to a &lsquo;safe&rsquo; fund after a fall turns a paper dip into a locked-in loss. This is the classic mistake."},
+      {tag:"do",text:"Keep contributing. Regular buying through a dip (&lsquo;dollar-cost averaging&rsquo;) is quietly one of the best things about KiwiSaver."}
+    ],
+    why:"A KiwiSaver balance only becomes a real loss when you sell. If your money has years to recover, market falls mainly change the price at which your contributions keep buying — usually in your favour. Concentration in US tech is the real risk to understand, not the daily wobble."
+  };
+
+  A.savings = {
+    title:"🏦 Savings &amp; term deposits",
+    tag:["Fine","Fine","Lock some in","Lock some in","Lock some in"][idx],
+    headline:[
+      `With the OCR at ${C.ocr.toFixed(2)}% and ${risingRates?"edging up":"drifting"}, term-deposit rates (~${td}% for 1yr) are reasonable. Keep your buffer liquid; ladder the rest.`,
+      `Term deposits around ${td}% are a fair, risk-free home for money you&rsquo;ll need in 1–3 years. Ladder them (spread maturity dates) so cash frees up regularly.`,
+      `If rates are near their peak, locking in a 1–2 year term deposit secures today&rsquo;s rate before any cuts. Keep the emergency buffer on-call, though.`,
+      `Cash and term deposits are doing their defensive job now. This is money that isn&rsquo;t falling while shares are — resist the urge to &lsquo;buy the dip&rsquo; with money you actually need.`,
+      `Guaranteed, government-adjacent safety (term deposits, on-call savings) is worth more than yield right now for money you can&rsquo;t afford to lose.`
+    ][idx],
+    points:[
+      {tag:"do",text:"Ladder term deposits (e.g. 3, 6, 12 months) so some cash always matures soon."},
+      {tag:idx>=2?"do":"hold",text:"Locking a 1–2 yr rate makes sense if you think rates have peaked; keep the buffer on-call."},
+      {tag:"hold",text:"Remember term deposits are taxed and barely beat inflation — they&rsquo;re for safety, not growth."}
+    ],
+    why:"Savings are the counterweight to your KiwiSaver: they don&rsquo;t grow much, but they don&rsquo;t fall, and they mean you never have to sell investments at a bad time."
+  };
+
+  return [A.buffer,A.creditcard,A.mortgage,A.kiwisaver,A.savings];
+}
+
+function renderAdvice(D,A){
+  const idx=A.levelIdx, L=LEVELS[idx];
+  const items=adviceModel(D,idx);
+  document.getElementById("adviceList").innerHTML = items.map((it,n)=>{
+    // buffer + credit-card always open; more topics auto-open as severity rises
+    const open = (n<=1 || (idx>=2 && n===2) || idx>=3) ? "open":"";
+    const pts = it.points.map(p=>`<li><span class="pill ${p.tag}">${p.tag==="do"?"DO":p.tag==="hold"?"OK":"AVOID"}</span>${p.text}</li>`).join("");
+    return `<details class="advice" ${open}>
+      <summary><h3>${it.title}</h3><span class="now ${L.tone}" style="background:var(--${L.key}-bg)">${L.icon} ${it.tag}</span></summary>
+      <div class="body">
+        <div class="headline">${it.headline}</div>
+        <ul>${pts}</ul>
+        <div class="why"><b>Why:</b> ${it.why}</div>
+      </div>
+    </details>`;
+  }).join("");
+}
+
+const GLOSSARY = [
+  ["OCR (Official Cash Rate)","The RBNZ&rsquo;s master interest rate. It nudges every mortgage &amp; savings rate."],
+  ["Margin call","When money you borrowed to buy shares must be repaid because the shares fell — forcing a sale. The engine of Korea&rsquo;s crash."],
+  ["Drawdown","How far something has fallen from its recent high. The honest measure of damage."],
+  ["VIX","Wall Street&rsquo;s &lsquo;fear gauge&rsquo;. Under 20 = calm, over 30 = panic."],
+  ["Risk-off","When investors flee risky assets (shares) for safe ones (cash, US dollars). Pulls the NZ dollar down."],
+  ["Dollar-cost averaging","Investing the same amount regularly (like KiwiSaver) so you buy more when prices are low. A dip works in your favour."],
+  ["Concentration risk","Too many eggs in one basket — e.g. Korea&rsquo;s index being half two chip stocks, or your KiwiSaver leaning on US tech."]
+];
+
+/* ===========================================================================
+ *  BOOT + optional live refresh
+ * =========================================================================*/
+function renderAll(D){
+  const A=assess(D);
+  const L=LEVELS[A.levelIdx];
+
+  // hero gauge
+  const g=document.getElementById("gauge");
+  g.className="gauge "+L.cls;
+  document.getElementById("gIcon").textContent=L.icon;
+  document.getElementById("gName").textContent=L.name;
+  document.getElementById("ladder").innerHTML=LEVELS.map((_,i)=>
+    `<span style="background:${i<=A.levelIdx?`var(--${L.key})`:'var(--line)'}"></span>`).join("");
+
+  const s=summaryText(D,A);
+  document.getElementById("summaryHead").textContent=s.head;
+  document.getElementById("summaryText").innerHTML=s.body;
+  document.getElementById("drivers").innerHTML = A.drivers.length
+    ? A.drivers.sort((a,b)=>b.statusIdx-a.statusIdx).map(d=>{const st=LEVELS[Math.min(d.statusIdx,4)];
+        return `<span class="chip"><span class="dot" style="background:var(--${st.key})"></span>${d.text}</span>`;}).join("")
+    : `<span class="chip"><span class="dot" style="background:var(--calm)"></span>No indicator is flashing today</span>`;
+
+  // tiles
+  document.getElementById("tiles").innerHTML =
+    ["kospi","spx","ndq","vix","nzx50","nzdusd","gdt"].map(k=>tile(k,D,A)).join("");
+
+  renderChain(A);
+  renderStructural(D);
+
+  // tab 2 banner + advice
+  document.getElementById("bannerLvl").innerHTML=`<span class="${L.tone}">${L.name.toLowerCase()}</span>`;
+  const bsub={0:"Markets are calm. Your job is simply to keep good habits in place.",1:"A real but contained scare. Housekeeping, not heroics.",2:"Stress is spreading. Tighten the defensive basics now, calmly.",3:"A broad sell-off. Protect cash and income; don&rsquo;t sell long-term investments into fear.",4:"A stress event. Cover essentials and avoid any forced financial decision."}[A.levelIdx];
+  document.getElementById("bannerSub").innerHTML=bsub;
+  const bg=document.getElementById("bannerGauge"); bg.className="gauge "+L.cls;
+  document.getElementById("bIcon").textContent=L.icon;
+  document.getElementById("bName").textContent=L.name;
+  renderAdvice(D,A);
+
+  // glossary
+  document.getElementById("glossary").innerHTML=GLOSSARY.map(([k,v])=>
+    `<div class="k"><b>${k}</b></div><div class="v" style="text-align:left;font-weight:400;color:var(--ink-2)">${v}</div>`).join("");
+
+  // updated line + disclaimer
+  const live = D.source==="live";
+  document.getElementById("updatedLine").innerHTML =
+    `${live?'<span class="livedot"></span>':''}Data as at <b>${D.updated}</b> · source: ${live?"live automated feed":"baseline snapshot"} · warning score ${A.score}/16`;
+  document.getElementById("disc").innerHTML =
+    `<b>Not financial advice.</b> This is an educational dashboard built from public data to help you understand a news story. It doesn&rsquo;t know your personal situation. For decisions about your mortgage, KiwiSaver or debt, talk to a licensed NZ financial adviser. Data: Stooq / RBNZ / GDT / news wires (see FACT-CHECK.md). Last built 2026-07-21.`;
+}
+
+/* Optional: upgrade prices live in the browser when online (best-effort).
+   Stooq sends permissive CORS headers; if it&rsquo;s blocked we silently keep
+   the seeded/automated data. The reliable daily refresh is the GitHub Action. */
+const STOOQ={kospi:"^kospi",spx:"^spx",ndq:"^ndq",vix:"^vix",nzx50:"^nz50",nzdusd:"nzdusd"};
+async function tryLive(D){
+  try{
+    const syms=Object.values(STOOQ).join("+");
+    const url=`https://stooq.com/q/l/?s=${encodeURIComponent(syms)}&f=sd2t2ohlcv&h&e=csv`;
+    const r=await fetch(url,{cache:"no-store"});
+    if(!r.ok) return;
+    const rows=(await r.text()).trim().split("\n").slice(1);
+    const bySym={}; rows.forEach(line=>{const c=line.split(","); bySym[c[0].toLowerCase()]=parseFloat(c[6]);});
+    let any=false;
+    for(const [k,sym] of Object.entries(STOOQ)){
+      const v=bySym[sym.toLowerCase()];
+      if(v && !isNaN(v) && k!=="gdt"){ D.indicators[k].prevClose=D.indicators[k].value===v?D.indicators[k].prevClose:D.indicators[k].value; D.indicators[k].value=v; any=true; }
+    }
+    if(any){ D.source="live"; D.updated=new Date().toISOString().slice(0,10); renderAll(D); }
+  }catch(e){ /* offline or CORS — keep existing data, no problem */ }
+}
+
+// theme toggle
+const root=document.documentElement;
+document.getElementById("themeBtn").onclick=()=>{
+  const cur=root.getAttribute("data-theme")|| (matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  root.setAttribute("data-theme", cur==="dark"?"light":"dark");
+};
+// tabs
+function show(n){
+  document.getElementById("tab1").setAttribute("aria-selected", n===1);
+  document.getElementById("tab2").setAttribute("aria-selected", n===2);
+  document.getElementById("view1").classList.toggle("hidden", n!==1);
+  document.getElementById("view2").classList.toggle("hidden", n!==2);
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+document.getElementById("tab1").onclick=()=>show(1);
+document.getElementById("tab2").onclick=()=>show(2);
+
+// GO
+const DATA = window.MARKET_DATA || {indicators:{},context:{},updated:"—",source:"seed"};
+renderAll(DATA);
+tryLive(DATA);
+
+// Register the service worker so the page installs as an app & works offline.
+// (Only runs over http/https — silently skipped on a double-clicked file://.)
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
