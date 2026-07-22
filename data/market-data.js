@@ -12,7 +12,8 @@ window.MARKET_DATA = {
       "value": 7474,
       "prevClose": 7620,
       "peak52w": 9000,
-      "unit": "pts"
+      "unit": "pts",
+      "history": [4500,5200,5900,6800,8000,9000,8100,7474]
     },
     "spx": {
       "label": "S&P 500",
@@ -21,7 +22,8 @@ window.MARKET_DATA = {
       "value": 7437,
       "prevClose": 7458,
       "peak52w": 7520,
-      "unit": "pts"
+      "unit": "pts",
+      "history": [6600,6720,6800,6520,6880,7250,7460,7437]
     },
     "ndq": {
       "label": "Nasdaq Composite",
@@ -30,7 +32,8 @@ window.MARKET_DATA = {
       "value": 24050,
       "prevClose": 24080,
       "peak52w": 24800,
-      "unit": "pts"
+      "unit": "pts",
+      "history": [21500,21900,22300,21200,22600,23800,24200,24050]
     },
     "vix": {
       "label": "VIX — Wall St fear gauge",
@@ -48,7 +51,8 @@ window.MARKET_DATA = {
       "value": 13679,
       "prevClose": 13710,
       "peak52w": 13860,
-      "unit": "pts"
+      "unit": "pts",
+      "history": [12800,12950,13100,13000,13380,13720,13800,13679]
     },
     "nzdusd": {
       "label": "NZD / USD",

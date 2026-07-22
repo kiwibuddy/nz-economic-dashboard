@@ -14,15 +14,19 @@ import csv, io, json, sys, urllib.request, urllib.parse, datetime
 BASELINE = {
   "indicators": {
     "kospi":  {"label":"KOSPI","country":"South Korea","flag":"🇰🇷","value":7474,"prevClose":7620,"peak52w":9000,"unit":"pts",
-               "yahoo":["^KS11"], "stooq":"^kospi"},
+               "yahoo":["^KS11"], "stooq":"^kospi",
+               "history":[4500,5200,5900,6800,8000,9000,8100,7474]},
     "spx":    {"label":"S&P 500","country":"USA","flag":"🇺🇸","value":7437,"prevClose":7458,"peak52w":7520,"unit":"pts",
-               "yahoo":["^GSPC"], "stooq":"^spx"},
+               "yahoo":["^GSPC"], "stooq":"^spx",
+               "history":[6600,6720,6800,6520,6880,7250,7460,7437]},
     "ndq":    {"label":"Nasdaq Composite","country":"USA (tech)","flag":"🇺🇸","value":24050,"prevClose":24080,"peak52w":24800,"unit":"pts",
-               "yahoo":["^IXIC"], "stooq":"^ndq"},
+               "yahoo":["^IXIC"], "stooq":"^ndq",
+               "history":[21500,21900,22300,21200,22600,23800,24200,24050]},
     "vix":    {"label":"VIX — Wall St fear gauge","country":"USA","flag":"🌡️","value":18.77,"prevClose":17.90,"peak52w":None,"unit":"",
                "yahoo":["^VIX"], "stooq":"^vix"},
     "nzx50":  {"label":"NZX 50","country":"New Zealand","flag":"🇳🇿","value":13679,"prevClose":13710,"peak52w":13860,"unit":"pts",
-               "yahoo":["^NZ50","^NZX50"], "stooq":"^nz50"},
+               "yahoo":["^NZ50","^NZX50"], "stooq":"^nz50",
+               "history":[12800,12950,13100,13000,13380,13720,13800,13679]},
     "nzdusd": {"label":"NZD / USD","country":"New Zealand","flag":"💵","value":0.578,"prevClose":0.576,"ref1m":0.588,"peak52w":None,"unit":"",
                "yahoo":["NZDUSD=X"], "stooq":"nzdusd"},
     "gdt":    {"label":"Global Dairy Trade (last auction)","country":"New Zealand","flag":"🥛","value":-4.9,"kind":"event_pct","wmp":3425,"prevEvent":-1.2,"unit":"%"},
@@ -64,7 +68,7 @@ def yahoo_series(sym):
         value = meta.get("regularMarketPrice") or closes[-1]
         prev = closes[-2] if len(closes) >= 2 else meta.get("chartPreviousClose", closes[-1])
         peak = max(closes + [value])
-        return (float(value), float(prev), float(peak))
+        return (float(value), float(prev), float(peak), [float(c) for c in closes])
     except Exception as e:
         print(f"    yahoo {sym}: {e}", file=sys.stderr)
         return None
@@ -78,7 +82,7 @@ def stooq_series(sym):
         closes = [float(x["Close"]) for x in rows if x.get("Close") not in (None, "", "N/D")]
         if len(closes) < 2:
             return None
-        return (closes[-1], closes[-2], max(closes[-260:]))
+        return (closes[-1], closes[-2], max(closes[-260:]), closes)
     except Exception as e:
         print(f"    stooq {sym}: {e}", file=sys.stderr)
         return None
@@ -98,13 +102,16 @@ def refresh(data):
         if not series:
             print(f"  - {key}: kept baseline (no live data)")
             continue
-        value, prev, peak = series
+        value, prev, peak, closes = series
         ind["value"] = round(value, 4)
         ind["prevClose"] = round(prev, 4)
         if ind.get("peak52w") is not None:
             ind["peak52w"] = round(peak, 4)
+        # keep a compact recent series for the sparkline / hero chart (~90 points)
+        tail = closes[-90:]
+        ind["history"] = [round(c, 4) for c in tail]
         live_any = True
-        print(f"  ✓ {key}: {ind['value']} (prev {ind['prevClose']})")
+        print(f"  ✓ {key}: {ind['value']} (prev {ind['prevClose']}, {len(tail)} pts)")
     return live_any
 
 def write_js(data, live):
