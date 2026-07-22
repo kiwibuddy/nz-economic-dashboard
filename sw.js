@@ -1,10 +1,13 @@
 /* NZ Economic Watch — service worker.
-   Makes the dashboard installable and usable offline. Strategy:
-   - App shell (html, icons, manifest): cache-first (instant, offline-proof).
-   - Market data: network-first, falling back to the last cached copy — so you
-     get fresh numbers when online and the most recent snapshot when not.
-   Bump CACHE when you change the shell so clients pick up the new version. */
-const CACHE = "nz-econ-watch-v1";
+   Makes the dashboard installable and usable offline.
+
+   Strategy (revised so updates always show):
+   - The page + data (index.html, "./", market-data.js): NETWORK-FIRST — always
+     try the latest from the server, fall back to cache only when offline. This
+     is what fixes "I still see the old version after a deploy".
+   - Static assets (icons, manifest): cache-first, refreshed in the background.
+   Bump CACHE on any shell change so old caches are cleared on activate. */
+const CACHE = "nz-econ-watch-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -20,34 +23,41 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
+
+function networkFirst(req) {
+  return fetch(req)
+    .then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy));
+      return res;
+    })
+    .catch(() => caches.match(req).then((hit) => hit || caches.match("./index.html")));
+}
+
+function cacheFirst(req) {
+  return caches.match(req).then((hit) =>
+    hit || fetch(req).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy));
+      return res;
+    })
+  );
+}
 
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
-  const isData = req.url.includes("market-data.js");
-
-  if (isData) {
-    // network-first for the numbers
-    e.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match(req))
-    );
+  const url = new URL(req.url);
+  const isDoc = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+  const isData = url.pathname.endsWith("market-data.js");
+  if (isDoc || isData) {
+    e.respondWith(networkFirst(req));   // always prefer fresh
   } else {
-    // cache-first for the shell
-    e.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match("./index.html")))
-    );
+    e.respondWith(cacheFirst(req));     // icons, manifest
   }
 });
