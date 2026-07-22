@@ -2,32 +2,29 @@
 """
 fetch_data.py — regenerate data/market-data.js from live sources.
 
-Design goals:
-  * Standard library only (no pip install) so the GitHub Action is trivial.
-  * NEVER produce a broken/empty dashboard: every field has a baseline, and if
-    a live fetch fails we fall back to that baseline for THAT field only.
-  * The slow-moving NZ context + the video's structural gauges live in the
-    BASELINE dict below and are hand-maintained (edit here when new prints land:
-    FINRA margin debt monthly, hyperscaler capex quarterly, RBNZ OCR, GDT).
+Primary source: Yahoo Finance chart API (query1.finance.yahoo.com) — reliable
+from CI/datacenter IPs, no API key. Fallback: Stooq CSV. If both fail for an
+indicator, its hand-entered baseline is kept, so the dashboard is never blank.
 
-Data source for the daily market indicators: Stooq (stooq.com) CSV endpoints,
-which are free, keyless and CORS-friendly. Symbols can change; if one stops
-resolving the script keeps that indicator's baseline and logs a warning.
-
-Run locally:   python3 fetch_data.py
-In CI:         see .github/workflows/refresh-market-data.yml
+Standard library only (no pip install). Run: python3 fetch_data.py
 """
-import csv, io, json, sys, urllib.request, datetime, re
+import csv, io, json, sys, urllib.request, urllib.parse, datetime
 
-# --- BASELINE (matches data/market-data.js seed; the safety net) -------------
+# --- BASELINE (safety net; also holds the slow-moving NZ + structural data) --
 BASELINE = {
   "indicators": {
-    "kospi":  {"label":"KOSPI","country":"South Korea","flag":"🇰🇷","value":7474,"prevClose":7620,"peak52w":9000,"unit":"pts","stooq":"^kospi"},
-    "spx":    {"label":"S&P 500","country":"USA","flag":"🇺🇸","value":7437,"prevClose":7458,"peak52w":7520,"unit":"pts","stooq":"^spx"},
-    "ndq":    {"label":"Nasdaq Composite","country":"USA (tech)","flag":"🇺🇸","value":24050,"prevClose":24080,"peak52w":24800,"unit":"pts","stooq":"^ndq"},
-    "vix":    {"label":"VIX — Wall St fear gauge","country":"USA","flag":"🌡️","value":18.77,"prevClose":17.90,"peak52w":None,"unit":"","stooq":"^vix"},
-    "nzx50":  {"label":"NZX 50","country":"New Zealand","flag":"🇳🇿","value":13679,"prevClose":13710,"peak52w":13860,"unit":"pts","stooq":"^nz50"},
-    "nzdusd": {"label":"NZD / USD","country":"New Zealand","flag":"💵","value":0.578,"prevClose":0.576,"ref1m":0.588,"peak52w":None,"unit":"","stooq":"nzdusd"},
+    "kospi":  {"label":"KOSPI","country":"South Korea","flag":"🇰🇷","value":7474,"prevClose":7620,"peak52w":9000,"unit":"pts",
+               "yahoo":["^KS11"], "stooq":"^kospi"},
+    "spx":    {"label":"S&P 500","country":"USA","flag":"🇺🇸","value":7437,"prevClose":7458,"peak52w":7520,"unit":"pts",
+               "yahoo":["^GSPC"], "stooq":"^spx"},
+    "ndq":    {"label":"Nasdaq Composite","country":"USA (tech)","flag":"🇺🇸","value":24050,"prevClose":24080,"peak52w":24800,"unit":"pts",
+               "yahoo":["^IXIC"], "stooq":"^ndq"},
+    "vix":    {"label":"VIX — Wall St fear gauge","country":"USA","flag":"🌡️","value":18.77,"prevClose":17.90,"peak52w":None,"unit":"",
+               "yahoo":["^VIX"], "stooq":"^vix"},
+    "nzx50":  {"label":"NZX 50","country":"New Zealand","flag":"🇳🇿","value":13679,"prevClose":13710,"peak52w":13860,"unit":"pts",
+               "yahoo":["^NZ50","^NZX50"], "stooq":"^nz50"},
+    "nzdusd": {"label":"NZD / USD","country":"New Zealand","flag":"💵","value":0.578,"prevClose":0.576,"ref1m":0.588,"peak52w":None,"unit":"",
+               "yahoo":["NZDUSD=X"], "stooq":"nzdusd"},
     "gdt":    {"label":"Global Dairy Trade (last auction)","country":"New Zealand","flag":"🥛","value":-4.9,"kind":"event_pct","wmp":3425,"prevEvent":-1.2,"unit":"%"},
   },
   "context": {
@@ -48,68 +45,86 @@ BASELINE = {
   },
 }
 
-STOOQ_HIST = "https://stooq.com/q/d/l/?s={sym}&i=d"   # full daily history CSV
+UA = {"User-Agent": "Mozilla/5.0 (compatible; nz-econ-dashboard/1.0)"}
 
-def fetch_history(sym):
-    """Return list of (date, close) rising by date, or None on failure."""
-    url = STOOQ_HIST.format(sym=urllib.parse.quote(sym))
+def _get(url, timeout=30):
+    return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout)
+
+def yahoo_series(sym):
+    """(value, prevClose, peak52w) from Yahoo chart API, or None."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1y&interval=1d"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent":"nz-econ-dashboard/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            text = r.read().decode("utf-8", "replace")
-        rows = list(csv.DictReader(io.StringIO(text)))
-        out = []
-        for row in rows:
-            c = row.get("Close") or row.get("close")
-            d = row.get("Date") or row.get("date")
-            if c and c not in ("N/D","",) :
-                out.append((d, float(c)))
-        return out or None
+        with _get(url) as r:
+            data = json.load(r)
+        res = data["chart"]["result"][0]
+        meta = res.get("meta", {})
+        closes = [c for c in res["indicators"]["quote"][0]["close"] if c is not None]
+        if not closes:
+            return None
+        value = meta.get("regularMarketPrice") or closes[-1]
+        prev = closes[-2] if len(closes) >= 2 else meta.get("chartPreviousClose", closes[-1])
+        peak = max(closes + [value])
+        return (float(value), float(prev), float(peak))
     except Exception as e:
-        print(f"  ! {sym}: {e}", file=sys.stderr)
+        print(f"    yahoo {sym}: {e}", file=sys.stderr)
+        return None
+
+def stooq_series(sym):
+    """(value, prevClose, peak52w) from Stooq history CSV, or None."""
+    url = f"https://stooq.com/q/d/l/?s={urllib.parse.quote(sym)}&i=d"
+    try:
+        with _get(url) as r:
+            rows = list(csv.DictReader(io.StringIO(r.read().decode("utf-8", "replace"))))
+        closes = [float(x["Close"]) for x in rows if x.get("Close") not in (None, "", "N/D")]
+        if len(closes) < 2:
+            return None
+        return (closes[-1], closes[-2], max(closes[-260:]))
+    except Exception as e:
+        print(f"    stooq {sym}: {e}", file=sys.stderr)
         return None
 
 def refresh(data):
     live_any = False
-    today = datetime.date.today()
     for key, ind in data["indicators"].items():
-        sym = ind.get("stooq")
-        if not sym:
+        if "yahoo" not in ind and "stooq" not in ind:
             continue
-        hist = fetch_history(sym)
-        if not hist or len(hist) < 2:
+        series = None
+        for sym in ind.get("yahoo", []):
+            series = yahoo_series(sym)
+            if series:
+                break
+        if not series and ind.get("stooq"):
+            series = stooq_series(ind["stooq"])
+        if not series:
             print(f"  - {key}: kept baseline (no live data)")
             continue
-        ind["value"] = round(hist[-1][1], 4)
-        ind["prevClose"] = round(hist[-2][1], 4)
-        # rolling ~52-week peak from the last 260 trading days
+        value, prev, peak = series
+        ind["value"] = round(value, 4)
+        ind["prevClose"] = round(prev, 4)
         if ind.get("peak52w") is not None:
-            window = [c for _, c in hist[-260:]]
-            ind["peak52w"] = round(max(window), 4)
+            ind["peak52w"] = round(peak, 4)
         live_any = True
         print(f"  ✓ {key}: {ind['value']} (prev {ind['prevClose']})")
     return live_any
 
 def write_js(data, live):
-    # strip the internal "stooq" helper keys from the shipped file
-    inds = {k: {kk: vv for kk, vv in v.items() if kk != "stooq"} for k, v in data["indicators"].items()}
+    inds = {k: {kk: vv for kk, vv in v.items() if kk not in ("yahoo", "stooq")}
+            for k, v in data["indicators"].items()}
     payload = {
-        "updated": datetime.date.today().isoformat(),
+        "updated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="minutes"),
         "source": "live" if live else "seed",
         "note": "Auto-generated by fetch_data.py. Slow-moving fields edited in the script.",
         "indicators": inds,
         "context": data["context"],
         "structural": data["structural"],
     }
-    body = json.dumps(payload, ensure_ascii=False, indent=2)
     header = ("/* AUTO-GENERATED by fetch_data.py — do not hand-edit the numbers here.\n"
               "   Loaded by index.html via <script>. See fetch_data.py to change baselines. */\n")
-    return header + "window.MARKET_DATA = " + body + ";\n"
+    return header + "window.MARKET_DATA = " + json.dumps(payload, ensure_ascii=False, indent=2) + ";\n"
 
 if __name__ == "__main__":
-    print("Refreshing market indicators from Stooq…")
+    print("Refreshing market indicators (Yahoo Finance, Stooq fallback)…")
     live = refresh(BASELINE)
-    out = write_js(BASELINE, live)
     with open("data/market-data.js", "w", encoding="utf-8") as f:
-        f.write(out)
+        f.write(write_js(BASELINE, live))
     print(f"Wrote data/market-data.js (source={'live' if live else 'seed'})")

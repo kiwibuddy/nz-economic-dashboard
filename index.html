@@ -162,6 +162,11 @@ button.ghost:hover{border-color:var(--accent);color:var(--accent)}
 .disc{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:24px}
 .hidden{display:none}
 .updated{font-size:12px;color:var(--muted)}
+.stamp{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:11px;color:var(--muted);text-align:right;line-height:1.25}
+.stamp .lbl{text-transform:uppercase;letter-spacing:.08em;font-size:9.5px;opacity:.8}
+.stamp .val{font-size:12px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:5px}
+.stamp .val .d{width:7px;height:7px;border-radius:50%}
+@media(max-width:520px){.stamp{display:none}}
 .livedot{width:7px;height:7px;border-radius:50%;background:var(--calm);display:inline-block;margin-right:5px;
   box-shadow:0 0 0 0 var(--calm);animation:pulse 2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,143,91,.5)}70%{box-shadow:0 0 0 6px rgba(47,143,91,0)}100%{box-shadow:0 0 0 0 rgba(47,143,91,0)}}
@@ -176,6 +181,7 @@ button.ghost:hover{border-color:var(--accent);color:var(--accent)}
       <p>Is the Korea &rarr; US market story reaching New Zealand — and what it means for your money. Plain English, no jargon.</p>
     </div>
     <div class="tools">
+      <div class="stamp" id="stamp" title="When the market data was last refreshed"></div>
       <button class="ghost" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
     </div>
   </header>
@@ -299,6 +305,18 @@ const LEVELS = [
 
 function pct(a,b){ return b ? (a-b)/b*100 : 0; }
 function fmt(n,d=0){ return n==null?"—":Number(n).toLocaleString("en-NZ",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+/* friendly NZ-time string. Accepts a full ISO datetime ("...T..:..+00:00")
+   or a bare date ("2026-07-22"). Shows the time only when we actually have it. */
+function fmtUpdated(s){
+  if(!s) return "—";
+  const hasTime = String(s).includes("T");
+  const dt = new Date(s);
+  if(isNaN(dt)) return s;
+  const opts = hasTime
+    ? {timeZone:"Pacific/Auckland",weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}
+    : {timeZone:"Pacific/Auckland",weekday:"short",day:"numeric",month:"short",year:"numeric"};
+  return dt.toLocaleString("en-NZ",opts).replace(",","") + (hasTime?" NZ":"");
+}
 
 /* score each indicator → contribute points; also decide its own dot colour */
 function assess(D){
@@ -654,12 +672,17 @@ function renderAll(D){
   document.getElementById("glossary").innerHTML=GLOSSARY.map(([k,v])=>
     `<div class="k"><b>${k}</b></div><div class="v" style="text-align:left;font-weight:400;color:var(--ink-2)">${v}</div>`).join("");
 
-  // updated line + disclaimer
+  // updated line + top-right stamp + disclaimer
   const live = D.source==="live";
+  const friendly = fmtUpdated(D.updated);
+  const stampCol = live ? "var(--calm)" : "var(--muted)";
+  document.getElementById("stamp").innerHTML =
+    `<span class="lbl">Last updated</span>
+     <span class="val"><span class="d" style="background:${stampCol}"></span>${friendly}</span>`;
   document.getElementById("updatedLine").innerHTML =
-    `${live?'<span class="livedot"></span>':''}Data as at <b>${D.updated}</b> · source: ${live?"live automated feed":"baseline snapshot"} · warning score ${A.score}/16`;
+    `${live?'<span class="livedot"></span>':''}Data as at <b>${friendly}</b> · source: ${live?"live automated feed":"baseline snapshot"} · warning score ${A.score}/16`;
   document.getElementById("disc").innerHTML =
-    `<b>Not financial advice.</b> This is an educational dashboard built from public data to help you understand a news story. It doesn&rsquo;t know your personal situation. For decisions about your mortgage, KiwiSaver or debt, talk to a licensed NZ financial adviser. Data: Stooq / RBNZ / GDT / news wires (see FACT-CHECK.md). Last built 2026-07-21.`;
+    `<b>Not financial advice.</b> This is an educational dashboard built from public data to help you understand a news story. It doesn&rsquo;t know your personal situation. For decisions about your mortgage, KiwiSaver or debt, talk to a licensed NZ financial adviser. Data: Yahoo Finance / RBNZ / Global Dairy Trade / news wires (see FACT-CHECK.md).`;
 }
 
 /* Optional: upgrade prices live in the browser when online (best-effort).
